@@ -6,5 +6,8 @@ Database application for managin rentals developed as a part of the course Datab
 
 ## Installation
 
-1. Run `git clone https://github.com/MiraZzle/rental-manager-db.git`
+1. Clone the repository
+   ```bash
+   git clone https://github.com/MiraZzle/rental-manager-db.git
+   ```
 2. Execute the queries in `src` folder
