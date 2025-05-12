@@ -1,5 +1,11 @@
 -- Author: Matěj Foukal
 
+/*
+  Rental Manager
+  Aplikace eviduje byty, majitele, nájemníky, smlouvy, platby, servisní akce, zaměstnance a servisní společnosti.
+  Vztahy mezi entitami reflektují životní cyklus nájemního vztahu a jeho správu.
+*/
+
 -- table of owners
 create table owners (
   owner_id number(22)
