@@ -1,4 +1,4 @@
--- Drop all Rental Manager database objects
+-- Author: Matěj Foukal
 
 -- Drop Views
 begin

@@ -1,3 +1,5 @@
+-- Author: Matěj Foukal
+
 -- flats.owner_id
 create index ix_flats_owner_id on flats(owner_id);
 

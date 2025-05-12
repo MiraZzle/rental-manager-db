@@ -1,3 +1,5 @@
+-- Author: Matěj Foukal
+
 -- View of all active contracts with flat and tenant info
 create or replace view active_contracts as
 select

@@ -1,4 +1,4 @@
--- Rental Manager – Test Examples
+-- Author: Matěj Foukal
 
 -- 1. View current owners
 select * from owners;
@@ -94,11 +94,6 @@ exec db_flat.new_flat('Nestedova 10, Praha', 68, 2, 1);
 exec db_contract.new_contract(8, 8, DATE '2024-04-01', null, 16500);
 exec db_payment.new_payment(8, DATE '2024-04-05', 16500, 'PAID');
 select * from contract_payment_summary where contract_id = 8;
-
-
--- Rental Manager – Test Examples
-
--- (Sections 1–17 unchanged, followed by new complex examples)
 
 -- 18. Full lifecycle: Add flat + tenant, create contract, simulate 3 payments, request, resolve, summarize
 exec db_owner.new_owner('Lifecycle Owner', 'owner.lifecycle@example.com', '601999000');

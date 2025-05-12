@@ -1,4 +1,4 @@
--- Gather statistics for Rental Manager schema
+-- Author: Matěj Foukal
 
 -- Schema-level statistics
 exec dbms_stats.gather_schema_stats(USER);

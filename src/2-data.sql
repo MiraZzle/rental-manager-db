@@ -1,5 +1,4 @@
--- Data Insertion Script for Rental Manager
--- Insert demo data using our custom packages
+-- Author: Matěj Foukal
 
 -- Owners
 exec db_owner.new_owner('Anna Novak', 'anna.novak@example.com', '601123456');

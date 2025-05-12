@@ -1,4 +1,4 @@
--- Rental Manager – All Packages and Procedures (Extended)
+-- Author: Matěj Foukal
 
 -- ==============================================
 -- OWNERS

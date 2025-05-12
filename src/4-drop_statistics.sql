@@ -1,4 +1,4 @@
--- Delete statistics for Rental Manager tables
+-- Author: Matěj Foukal
 
 exec dbms_stats.delete_table_stats(USER, 'OWNERS');
 exec dbms_stats.delete_table_stats(USER, 'TENANTS');

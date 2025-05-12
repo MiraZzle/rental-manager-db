@@ -1,3 +1,5 @@
+-- Author: Matěj Foukal
+
 -- table of owners
 create table owners (
   owner_id number(22)
