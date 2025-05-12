@@ -1,101 +1,101 @@
--- Author: Matěj Foukal
+-- Autor: Matěj Foukal
 
--- 1. View current owners
+-- 1. Zobrazení aktuálních vlastníků
 select * from owners;
--- Add new owner
+-- Přidání nového vlastníka
 exec db_owner.new_owner('Test Owner', 'test.owner@example.com', '601000001');
 select * from owners;
 
--- 2. View flats
+-- 2. Zobrazení bytů
 select * from flats;
--- Add new flat with valid owner
+-- Přidání nového bytu přiřazeného existujícímu vlastníkovi
 exec db_flat.new_flat('Testovaci 1, Praha', 70, 3, 1);
 select * from flats;
 
--- 3. View tenants
+-- 3. Zobrazení nájemníků
 select * from tenants;
--- Add new tenant
+-- Přidání nového nájemníka
 exec db_tenant.new_tenant('Test Tenant', 'test.tenant@example.com', '777123123');
 select * from tenants;
 
--- 4. Create a contract
+-- 4. Vytvoření nové nájemní smlouvy
 exec db_contract.new_contract(1, 1, DATE '2024-04-01', null, 14500);
 select * from contracts;
 
--- 5. Insert invalid contract (end before start)
+-- 5. Neplatná smlouva (datum konce před datem začátku) – test validace
 begin
   db_contract.new_contract(1, 2, DATE '2024-05-01', DATE '2024-03-01', 14000);
 exception when others then dbms_output.put_line(sqlerrm);
 end;
 /
 
--- 6. Add payment for the contract
+-- 6. Záznam platby ke smlouvě
 exec db_payment.new_payment(1, DATE '2024-04-01', 14500, 'PAID');
 select * from payments;
 
--- 7. Try invalid payment (amount = 0)
+-- 7. Neplatná platba (částka 0) – test kontrol v proceduře
 begin
   db_payment.new_payment(1, DATE '2024-04-01', 0, 'PAID');
 exception when others then dbms_output.put_line(sqlerrm);
 end;
 /
 
--- 8. Insert request and resolve it
-exec db_request.new_request(1, 1, 'Testing electrical outlet.', 'NEW');
+-- 8. Založení žádosti a její následné řešení
+exec db_request.new_request(1, 1, 'Zásuvka nefunguje.', 'NEW');
 select * from requests;
 
--- 9. Add employee
-exec db_employee.new_employee('Test Employee', 'Electrician', 'test.emp@example.com');
+-- 9. Přidání zaměstnance
+exec db_employee.new_employee('Test Employee', 'Elektrikář', 'test.emp@example.com');
 select * from employees;
 
--- 10. Add service company
+-- 10. Přidání servisní společnosti
 exec db_service_company.new_company('Test Services', 'contact@testservices.cz', '602998877');
 select * from service_companies;
 
--- 11. Add service action to request
-exec db_service_action.new_action(1, 1, 1, DATE '2024-04-05', 'Fixed and documented.');
+-- 11. Přidání servisního zásahu na žádost
+exec db_service_action.new_action(1, 1, 1, DATE '2024-04-05', 'Oprava provedena a zaznamenána.');
 select * from service_actions;
 
--- 12. Use views to verify business logic
+-- 12. Kontrola pohledů (VIEW) pro ověření funkčnosti systému
 select * from active_contracts;
 select * from unpaid_payments;
 select * from open_requests;
 select * from employee_actions;
 select * from contract_payment_summary;
 
--- 13. Get function outputs
--- Flat address by ID
+-- 13. Ověření výstupu funkcí
+-- Adresa bytu podle ID
 select db_flat.get_flat_address(1) as address from dual;
--- Owner name
+-- Jméno vlastníka podle ID
 select db_owner.get_owner_name(1) as owner from dual;
--- Total paid on contract
+-- Celkem zaplacené nájemné
 select db_payment.get_total_paid(1) as paid from dual;
--- Active contract count
+-- Počet aktivních smluv k bytu
 select db_contract.get_active_contract_count(1) as count from dual;
 
--- 14. Complex: Add multiple payments, check if total matches expectation
+-- 14. Komplexní: více plateb ke smlouvě, ověření výsledku
 exec db_payment.new_payment(1, DATE '2024-05-01', 14500, 'PAID');
 exec db_payment.new_payment(1, DATE '2024-06-01', 14500, 'PAID');
 select db_payment.get_total_paid(1) as total_paid_for_contract_1 from dual;
 
--- 15. Complex: Add two requests to same flat, verify unresolved count
-exec db_request.new_request(1, 1, 'Window broken.', 'NEW');
-exec db_request.new_request(1, 1, 'Heating malfunction.', 'IN_PROGRESS');
+-- 15. Komplexní: více žádostí k jednomu bytu, ověření otevřených
+exec db_request.new_request(1, 1, 'Rozbité okno.', 'NEW');
+exec db_request.new_request(1, 1, 'Nejde topení.', 'IN_PROGRESS');
 select db_request.count_open_requests(1) as unresolved_requests_for_flat_1 from dual;
 
--- 16. Complex: Add multiple service actions to same request
-exec db_service_action.new_action(1, 1, 1, DATE '2024-04-10', 'Follow-up inspection');
-exec db_service_action.new_action(1, 1, 1, DATE '2024-04-15', 'Final fix');
+-- 16. Komplexní: více servisních zásahů k jedné žádosti
+exec db_service_action.new_action(1, 1, 1, DATE '2024-04-10', 'Kontrola funkčnosti');
+exec db_service_action.new_action(1, 1, 1, DATE '2024-04-15', 'Finální oprava');
 select db_service_action.get_action_count(1) as action_count_for_request_1 from dual;
 
--- 17. Complex: Add tenant, flat, contract, payment, and validate
+-- 17. Komplexní: nájemník + byt + smlouva + platba + ověření ve view
 exec db_tenant.new_tenant('Nested Flow', 'nested@example.com', '601777000');
 exec db_flat.new_flat('Nestedova 10, Praha', 68, 2, 1);
 exec db_contract.new_contract(8, 8, DATE '2024-04-01', null, 16500);
 exec db_payment.new_payment(8, DATE '2024-04-05', 16500, 'PAID');
 select * from contract_payment_summary where contract_id = 8;
 
--- 18. Full lifecycle: Add flat + tenant, create contract, simulate 3 payments, request, resolve, summarize
+-- 18. Kompletní životní cyklus nájmu: založení, platby, žádost, servis, shrnutí
 exec db_owner.new_owner('Lifecycle Owner', 'owner.lifecycle@example.com', '601999000');
 exec db_flat.new_flat('Lifecycleova 99, Praha', 90, 4, 8);
 exec db_tenant.new_tenant('Lifecycle Tenant', 'tenant.lifecycle@example.com', '777888999');
@@ -103,33 +103,33 @@ exec db_contract.new_contract(9, 9, DATE '2024-01-01', null, 19000);
 exec db_payment.new_payment(9, DATE '2024-01-01', 19000, 'PAID');
 exec db_payment.new_payment(9, DATE '2024-02-01', 19000, 'PAID');
 exec db_payment.new_payment(9, DATE '2024-03-01', 19000, 'DUE');
-exec db_request.new_request(9, 9, 'Broken door lock.', 'NEW');
-exec db_employee.new_employee('Lifecycle Repairman', 'Locksmith', 'locksmith@example.com');
+exec db_request.new_request(9, 9, 'Rozbitý zámek.', 'NEW');
+exec db_employee.new_employee('Lifecycle Repairman', 'Zámečník', 'locksmith@example.com');
 exec db_service_company.new_company('LockFix s.r.o.', 'contact@lockfix.cz', '603444333');
-exec db_service_action.new_action(8, 8, 8, DATE '2024-03-05', 'Lock replaced and rekeyed');
+exec db_service_action.new_action(8, 8, 8, DATE '2024-03-05', 'Zámek vyměněn a přenastaven');
 
--- Verify total payments and contract visibility
+-- Ověření zaplacených částek a viditelnosti
 select db_payment.get_total_paid(9) as total_paid_lifecycle from dual;
 select * from active_contracts where flat_address like '%Lifecycleova%';
 select * from open_requests where flat like '%Lifecycleova%';
 select * from employee_actions where employee = 'Lifecycle Repairman';
 
--- Terminate contract
+-- Ukončení smlouvy
 exec db_contract.terminate_contract(9, DATE '2024-05-31');
 select * from contracts where contract_id = 9;
 
--- Change rent amount for contract 9 (after termination)
+-- Změna výše nájemného (po ukončení smlouvy)
 exec db_contract.change_rent(9, 21000);
 select * from contracts where contract_id = 9;
 
--- 19. Simulate conflicting contract (same flat, overlapping time)
+-- 19. Konfliktní smlouva pro stejný byt (měla by skončit chybou)
 begin
   db_contract.new_contract(9, 2, DATE '2024-03-01', DATE '2024-12-01', 21000);
-exception when others then dbms_output.put_line('Expected error: ' || sqlerrm);
+exception when others then dbms_output.put_line('Očekávaná chyba: ' || sqlerrm);
 end;
 /
 
--- 20. Add multiple tenants in quick succession, all with valid contracts
+-- 20. Sekvenční nájemníci – tři smlouvy po sobě
 exec db_tenant.new_tenant('Speed One', 'one@example.com', '601000111');
 exec db_tenant.new_tenant('Speed Two', 'two@example.com', '601000112');
 exec db_tenant.new_tenant('Speed Three', 'three@example.com', '601000113');
@@ -139,60 +139,60 @@ exec db_contract.new_contract(10, 11, DATE '2024-04-01', DATE '2024-06-30', 1300
 exec db_contract.new_contract(10, 12, DATE '2024-07-01', null, 13500);
 select * from contracts where flat_id = 10 order by start_date;
 
--- 21. Final cross-view integration test
+-- 21. Integrace napříč systémem – výpisy z view
 select * from contract_payment_summary order by total_paid desc;
 select * from unpaid_payments where status = 'DUE';
 select db_contract.get_active_contract_count(10) as active_contracts_speedova from dual;
 
--- 22. Negative test – delete owner with existing flat (should fail)
+-- 22. Negativní test – pokus o smazání vlastníka s navázaným bytem (FK porušen)
 begin
   delete from owners where owner_id = 1;
-exception when others then dbms_output.put_line('Expected error (FK): ' || sqlerrm);
+exception when others then dbms_output.put_line('Očekávaná chyba (FK): ' || sqlerrm);
 end;
 /
 
--- 23. Try inserting flat with non-existent owner (FK violation)
+-- 23. Vložení bytu s neexistujícím vlastníkem (FK porušen)
 begin
   db_flat.new_flat('Nonexistentova 1, Praha', 45, 1, 999);
-exception when others then dbms_output.put_line('Expected error (no owner): ' || sqlerrm);
+exception when others then dbms_output.put_line('Očekávaná chyba (neexistující vlastník): ' || sqlerrm);
 end;
 /
 
--- 24. Try inserting contract for non-existent flat (FK violation)
+-- 24. Vložení smlouvy k neexistujícímu bytu
 begin
   db_contract.new_contract(999, 1, DATE '2024-06-01', null, 13000);
-exception when others then dbms_output.put_line('Expected error (no flat): ' || sqlerrm);
+exception when others then dbms_output.put_line('Očekávaná chyba (neexistující byt): ' || sqlerrm);
 end;
 /
 
--- 25. Try inserting payment with invalid status
+-- 25. Neplatný status platby
 begin
   db_payment.new_payment(1, DATE '2024-07-01', 15000, 'INVALID_STATUS');
-exception when others then dbms_output.put_line('Expected error (status): ' || sqlerrm);
+exception when others then dbms_output.put_line('Očekávaná chyba (neplatný status): ' || sqlerrm);
 end;
 /
 
--- 26. Try adding request with invalid status
+-- 26. Neplatný status žádosti
 begin
-  db_request.new_request(1, 1, 'Unusual issue', 'INVALID');
-exception when others then dbms_output.put_line('Expected error (request status): ' || sqlerrm);
+  db_request.new_request(1, 1, 'Chybný vstup', 'INVALID');
+exception when others then dbms_output.put_line('Očekávaná chyba (neplatný status): ' || sqlerrm);
 end;
 /
 
--- 27. Validate error on service action with missing company/employee
+-- 27. Servisní zásah s neexistujícím zaměstnancem a společností
 begin
-  db_service_action.new_action(1, 999, 999, DATE '2024-04-01', 'Invalid references');
-exception when others then dbms_output.put_line('Expected error (FK refs): ' || sqlerrm);
+  db_service_action.new_action(1, 999, 999, DATE '2024-04-01', 'Chybné odkazy');
+exception when others then dbms_output.put_line('Očekávaná chyba (FK odkazy): ' || sqlerrm);
 end;
 /
 
--- 28. Edge case – request created and immediately resolved via service
-exec db_request.new_request(2, 2, 'Ceiling leak.', 'NEW');
-exec db_service_action.new_action(9, 1, 1, DATE '2024-04-15', 'Resolved same day');
+-- 28. Edge case – žádost založená a vyřízená hned
+exec db_request.new_request(2, 2, 'Zatéká stropem.', 'NEW');
+exec db_service_action.new_action(9, 1, 1, DATE '2024-04-15', 'Opraveno v den hlášení');
 select * from open_requests where request_id = 9;
 select db_service_action.get_action_count(9) from dual;
 
--- 29. Business check – summarize all flats and their active tenants
+-- 29. Business check – výpis všech bytů a počtu aktivních smluv
 select
   f.flat_id,
   f.address,
@@ -200,7 +200,7 @@ select
   (select count(*) from contracts c where c.flat_id = f.flat_id and (c.end_date is null or c.end_date > sysdate)) as active_contracts
 from flats f;
 
--- 30. Business check – get tenants with most open requests
+-- 30. Business check – nájemníci s nejvíce aktivními žádostmi
 select
   r.tenant_id,
   db_tenant.get_tenant_name(r.tenant_id) as tenant,

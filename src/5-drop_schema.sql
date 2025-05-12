@@ -1,6 +1,6 @@
 -- Author: Matěj Foukal
 
--- Drop Views
+-- Drop pohledy
 begin
   execute immediate 'drop view active_contracts';
   execute immediate 'drop view unpaid_payments';
@@ -11,7 +11,7 @@ exception when others then null;
 end;
 /
 
--- Drop Packages
+-- Drop package
 begin
   execute immediate 'drop package db_owner';
   execute immediate 'drop package db_tenant';
@@ -26,7 +26,7 @@ exception when others then null;
 end;
 /
 
--- Drop Sequences
+-- Drop sekvence
 begin
   execute immediate 'drop sequence owner_id_seq';
   execute immediate 'drop sequence tenant_id_seq';
@@ -41,7 +41,7 @@ exception when others then null;
 end;
 /
 
--- Drop Triggers
+-- Drop triggery
 begin
   execute immediate 'drop trigger owners_insert';
   execute immediate 'drop trigger tenants_insert';
@@ -56,7 +56,8 @@ exception when others then null;
 end;
 /
 
--- Drop Tables (must be in dependency order)
+-- Drop tabulky
+-- Pozn: tabulky musí být dropnuty v tomto pořadí, jinak dojde k chybě kvůli cizím klíčům
 begin
   execute immediate 'drop table service_actions';
   execute immediate 'drop table requests';

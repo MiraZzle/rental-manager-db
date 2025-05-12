@@ -1,4 +1,4 @@
--- Author: Matěj Foukal
+-- Autor: Matěj Foukal
 
 -- Owners
 exec db_owner.new_owner('Anna Novak', 'anna.novak@example.com', '601123456');

@@ -1,4 +1,4 @@
--- Author: Matěj Foukal
+-- Autor: Matěj Foukal
 
 /*
   Rental Manager

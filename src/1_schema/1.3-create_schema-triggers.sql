@@ -1,4 +1,4 @@
--- Author: Matěj Foukal
+-- Autor: Matěj Foukal
 
 create sequence flat_id_seq start with 1 increment by 1;
 create sequence owner_id_seq start with 1 increment by 1;

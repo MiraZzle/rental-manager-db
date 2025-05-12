@@ -1,9 +1,8 @@
--- Author: Matěj Foukal
+-- Autor: Matěj Foukal
 
--- Schema-level statistics
 exec dbms_stats.gather_schema_stats(USER);
 
--- Table-level statistics with column details
+-- Tabulkové statistiky
 exec dbms_stats.gather_table_stats(USER, 'OWNERS', cascade => TRUE);
 select column_name, nullable, num_distinct, num_nulls, density, histogram from ALL_TAB_COLUMNS where table_name = 'OWNERS';
 

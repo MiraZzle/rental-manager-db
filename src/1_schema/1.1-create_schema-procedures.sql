@@ -1,10 +1,13 @@
--- Author: Matěj Foukal
+-- Autor: Matěj Foukal
 
 -- ==============================================
 -- OWNERS
 -- ==============================================
+-- Balíček pro správu vlastníků bytů
 create or replace package db_owner is
+  -- Vloží nového vlastníka
   procedure new_owner(p_name varchar2, p_email varchar2, p_phone varchar2);
+  -- Vrátí jméno vlastníka podle ID
   function get_owner_name(p_owner_id number) return varchar2;
 end db_owner;
 /
@@ -31,8 +34,11 @@ end db_owner;
 -- ==============================================
 -- TENANTS
 -- ==============================================
+-- Balíček pro správu nájemníků
 create or replace package db_tenant is
+  -- Vloží nového nájemníka
   procedure new_tenant(p_name varchar2, p_email varchar2, p_phone varchar2);
+  -- Vrátí jméno nájemníka podle ID
   function get_tenant_name(p_tenant_id number) return varchar2;
 end db_tenant;
 /
@@ -59,8 +65,11 @@ end db_tenant;
 -- ==============================================
 -- FLATS
 -- ==============================================
+-- Balíček pro správu bytů
 create or replace package db_flat is
+  -- Vloží nový byt
   procedure new_flat(p_address varchar2, p_area number, p_rooms number, p_owner_id number);
+  -- Vrátí adresu bytu podle ID
   function get_flat_address(p_flat_id number) return varchar2;
 end db_flat;
 /
@@ -87,11 +96,17 @@ end db_flat;
 -- ==============================================
 -- CONTRACTS
 -- ==============================================
+-- Balíček pro správu nájemních smluv
 create or replace package db_contract is
+  -- Vytvoří novou smlouvu k bytu a nájemníkovi
   procedure new_contract(p_flat_id number, p_tenant_id number, p_start date, p_end date, p_rent number);
+  -- Ukončí smlouvu nastavením data ukončení
   procedure terminate_contract(p_contract_id number, p_end_date date);
+  -- Prodlouží smlouvu na nové datum
   procedure extend_contract(p_contract_id number, p_new_end date);
+  -- Změní částku nájmu ve smlouvě
   procedure change_rent(p_contract_id number, p_new_rent number);
+  -- Vrátí počet aktivních smluv k bytu
   function get_active_contract_count(p_flat_id number) return number;
 end db_contract;
 /
@@ -148,8 +163,11 @@ end db_contract;
 -- ==============================================
 -- PAYMENTS
 -- ==============================================
+-- Balíček pro správu plateb
 create or replace package db_payment is
+  -- Vloží novou platbu k dané smlouvě
   procedure new_payment(p_contract_id number, p_date date, p_amount number, p_status varchar2);
+  -- Vrátí celkovou zaplacenou částku k dané smlouvě (pouze status 'PAID')
   function get_total_paid(p_contract_id number) return number;
 end db_payment;
 /
@@ -178,8 +196,11 @@ end db_payment;
 -- ==============================================
 -- REQUESTS
 -- ==============================================
+-- Balíček pro správu žádostí od nájemníků
 create or replace package db_request is
+  -- Vloží novou žádost o opravu či servis
   procedure new_request(p_flat_id number, p_tenant_id number, p_description varchar2, p_status varchar2);
+  -- Vrátí počet aktuálně nevyřešených žádostí pro daný byt
   function count_open_requests(p_flat_id number) return number;
 end db_request;
 /
@@ -205,8 +226,11 @@ end db_request;
 -- ==============================================
 -- EMPLOYEES
 -- ==============================================
+-- Balíček pro správu zaměstnanců provádějících servis
 create or replace package db_employee is
+  -- Vloží nového zaměstnance
   procedure new_employee(p_name varchar2, p_role varchar2, p_email varchar2);
+  -- Vrátí jméno zaměstnance podle ID
   function get_employee_name(p_employee_id number) return varchar2;
 end db_employee;
 /
@@ -232,8 +256,11 @@ end db_employee;
 -- ==============================================
 -- SERVICE COMPANIES
 -- ==============================================
+-- Balíček pro správu servisních společností
 create or replace package db_service_company is
+  -- Vloží novou servisní společnost
   procedure new_company(p_name varchar2, p_email varchar2, p_phone varchar2);
+  -- Vrátí název společnosti podle ID
   function get_company_name(p_company_id number) return varchar2;
 end db_service_company;
 /
@@ -259,8 +286,11 @@ end db_service_company;
 -- ==============================================
 -- SERVICE ACTIONS
 -- ==============================================
+-- Balíček pro správu jednotlivých servisních zásahů
 create or replace package db_service_action is
+  -- Přidá nový servisní zásah (akci)
   procedure new_action(p_request_id number, p_employee_id number, p_company_id number, p_date date, p_note varchar2);
+  -- Vrátí počet servisních akcí k dané žádosti
   function get_action_count(p_request_id number) return number;
 end db_service_action;
 /
