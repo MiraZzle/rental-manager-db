@@ -15,7 +15,7 @@ The system tracks:
 
 The entity relationships model the full lifecycle of a rental agreement and its operational management.
 
-![alt](./docs/table_diagram.svg)
+![alt](./docs/td.svg)
 
 ## Installation
 
