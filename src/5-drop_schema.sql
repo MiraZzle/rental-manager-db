@@ -43,15 +43,9 @@ end;
 
 -- Drop triggery
 begin
-  execute immediate 'drop trigger owners_insert';
-  execute immediate 'drop trigger tenants_insert';
-  execute immediate 'drop trigger flats_insert';
   execute immediate 'drop trigger contracts_insert';
   execute immediate 'drop trigger payments_insert';
   execute immediate 'drop trigger requests_insert';
-  execute immediate 'drop trigger employees_insert';
-  execute immediate 'drop trigger service_companies_insert';
-  execute immediate 'drop trigger service_actions_insert';
 exception when others then null;
 end;
 /

@@ -30,6 +30,3 @@ create index ix_payments_status on payments(status);
 
 -- requests.status
 create index ix_requests_status on requests(status);
-
--- service_companies.name
-create index ix_service_companies_name on service_companies(company_name);

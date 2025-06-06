@@ -1,5 +1,16 @@
 -- Autor: Matěj Foukal
 
+-- SEKVENCE
+create sequence flat_id_seq start with 1 increment by 1;
+create sequence owner_id_seq start with 1 increment by 1;
+create sequence tenant_id_seq start with 1 increment by 1;
+create sequence contract_id_seq start with 1 increment by 1;
+create sequence payment_id_seq start with 1 increment by 1;
+create sequence request_id_seq start with 1 increment by 1;
+create sequence employee_id_seq start with 1 increment by 1;
+create sequence company_id_seq start with 1 increment by 1;
+create sequence action_id_seq start with 1 increment by 1;
+
 -- ==============================================
 -- OWNERS
 -- ==============================================
