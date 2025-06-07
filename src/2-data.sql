@@ -47,13 +47,13 @@ BEGIN
     db_payment.new_payment(6, DATE '2024-03-01', 17000, 'PAID');
 
     -- Requests
-    db_request.new_request(1, 1, 'Radiator not heating.', 'NEW');
-    db_request.new_request(2, 2, 'Leaking sink.', 'IN_PROGRESS');
-    db_request.new_request(3, 3, 'Window won’t close.', 'RESOLVED');
-    db_request.new_request(4, 4, 'Mold in bathroom.', 'NEW');
-    db_request.new_request(5, 5, 'Washing machine not working.', 'IN_PROGRESS');
-    db_request.new_request(6, 6, 'Noise from neighbors.', 'NEW');
-    db_request.new_request(7, 7, 'Broken light switch.', 'IN_PROGRESS');
+    db_request.new_request(1, 1, 'Radiator not heating.');
+    db_request.new_request(2, 2, 'Leaking sink.');
+    db_request.new_request(3, 3, 'Window won’t close.');
+    db_request.new_request(4, 4, 'Mold in bathroom.');
+    db_request.new_request(5, 5, 'Washing machine not working.');
+    db_request.new_request(6, 6, 'Noise from neighbors.');
+    db_request.new_request(7, 7, 'Broken light switch.');
 
     -- Employees
     db_employee.new_employee('Martin Hruby', 'Technician', 'martin.hruby@example.com');
