@@ -3,17 +3,19 @@
 ## About
 
 This Oracle SQL-based database application manages residential rentals.
-It was developed as part of the course **Database Application Development (NDBI026)** at Charles University.
+It was developed as part of the course [**Database Application Development (NDBI026)**](https://is.cuni.cz/studium/predmety/index.php?do=predmet&kod=NDBI026) at Charles University.
 
 The system tracks:
 
 - Flats and their owners
 - Tenants and rental contracts
-- Payments and overdue monitoring
+- Payments
 - Service requests, actions, and responsible employees
 - External service companies
 
-The entity relationships model the full lifecycle of a rental agreement and its operational management.
+The entity relationships should model the full lifecycle of a rental agreement and its operational management.
+
+## Data Model
 
 ![alt](./docs/td.svg)
 
@@ -42,7 +44,7 @@ The entity relationships model the full lifecycle of a rental agreement and its 
 
 To remove all schema objects and statistics:
 
-```sql
-@4-drop_statistics.sql
-@5-drop_schema.sql
+```bash
+4-drop_statistics.sql
+5-drop_schema.sql
 ```
