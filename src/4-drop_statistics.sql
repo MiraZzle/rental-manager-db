@@ -1,4 +1,4 @@
--- Author: Matěj Foukal
+-- Autor: Matěj Foukal
 
 exec dbms_stats.delete_table_stats(USER, 'OWNERS');
 exec dbms_stats.delete_table_stats(USER, 'TENANTS');

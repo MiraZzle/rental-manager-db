@@ -51,7 +51,7 @@ end;
 /
 
 -- Drop tabulky
--- Pozn: tabulky musí být dropnuty v tomto pořadí, jinak dojde k chybě kvůli cizím klíčům
+-- !Pozn: tabulky musí být dropnuty v tomto pořadí, jinak dojde k chybě kvůli cizím klíčům
 begin
   execute immediate 'drop table service_actions';
   execute immediate 'drop table requests';

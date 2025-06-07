@@ -1,6 +1,6 @@
 -- Autor: Matěj Foukal
 
--- Pohled na všechny aktivní nájemní smlouvy včetně údajů o bytě a nájemníkovi
+-- View na všechny aktivní nájemní smlouvy včetně údajů o bytě a nájemníkovi
 create or replace view active_contracts as
 select
   c.contract_id,
@@ -14,7 +14,7 @@ from contracts c
   join flats f on c.flat_id = f.flat_id
 where c.end_date is null or c.end_date > sysdate;
 
--- Pohled na všechny platby, které jsou buď dlužné, nebo zpožděné, včetně detailu smlouvy
+-- View na všechny platby, které jsou ve stavu DUE nebo LATE
 create or replace view unpaid_payments as
 select
   p.payment_id,
@@ -27,7 +27,7 @@ from payments p
   join contracts c on p.contract_id = c.contract_id
 where p.status in ('DUE', 'LATE');
 
--- Pohled na všechny nevyřešené žádosti (stav NEW nebo IN_PROGRESS)
+-- View na všechny nevyřešené žádosti (stav je NEW nebo IN_PROGRESS)
 create or replace view open_requests as
 select
   r.request_id,
@@ -39,7 +39,7 @@ select
 from requests r
 where r.status in ('NEW', 'IN_PROGRESS');
 
--- Pohled na všechny servisní akce rozdělené podle zaměstnance
+-- View na všechny servisní akce rozdělené podle zaměstnance
 create or replace view employee_actions as
 select
   s.action_id,
@@ -49,7 +49,7 @@ select
   s.note
 from service_actions s;
 
--- Souhrnný pohled na celkové zaplacené částky k jednotlivým smlouvám
+-- View na celkové zaplacené částky k jednotlivým smlouvám
 create or replace view contract_payment_summary as
 select
   c.contract_id,

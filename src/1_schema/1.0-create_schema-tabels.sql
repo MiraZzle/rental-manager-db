@@ -6,7 +6,7 @@
   Vztahy mezi entitami reflektují životní cyklus nájemního vztahu a jeho správu.
 */
 
--- table of owners
+-- table majitelů
 create table owners (
   owner_id number(22)
     constraint owners_pk
@@ -16,7 +16,7 @@ create table owners (
   phone varchar2(20 char)
 );
 
--- table of tenants
+-- table nájemníků
 create table tenants (
   tenant_id number(22)
     constraint tenants_pk
@@ -26,7 +26,7 @@ create table tenants (
   phone varchar2(20 char)
 );
 
--- table of flats
+-- table bytů
 create table flats (
   flat_id number(22)
     constraint flats_pk
@@ -46,7 +46,7 @@ create table flats (
         on delete cascade
 );
 
--- table of contracts
+-- table smluv
 create table contracts (
   contract_id number(22)
     constraint contracts_pk
@@ -70,7 +70,7 @@ create table contracts (
     unique(flat_id, tenant_id, start_date)
 );
 
--- table of payments
+-- table plateb
 create table payments (
   payment_id number(22)
     constraint payments_pk
@@ -88,7 +88,7 @@ create table payments (
       check (status in ('PAID', 'DUE', 'LATE'))
 );
 
--- table of service companies
+-- table servisních společností
 create table service_companies (
   company_id number(22)
     constraint service_companies_pk
@@ -100,7 +100,7 @@ create table service_companies (
   phone varchar2(20 char)
 );
 
--- table of employees
+-- table zaměstnanců
 create table employees (
   employee_id number(22)
     constraint employees_pk
@@ -110,7 +110,7 @@ create table employees (
   email varchar2(100 char)
 );
 
--- table of requests
+-- table žádostí o servis
 create table requests (
   request_id number(22)
     constraint requests_pk
@@ -130,7 +130,7 @@ create table requests (
       check (status in ('NEW', 'IN_PROGRESS', 'RESOLVED'))
 );
 
--- table of service actions
+-- table servisních akcí
 create table service_actions (
   action_id number(22)
     constraint service_actions_pk
