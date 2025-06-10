@@ -66,7 +66,6 @@ create table flats (
   owner_id number(22) not null
     constraint flats_fk_owner
       references owners(owner_id)
-        on delete cascade
 );
 
 -- table smluv
@@ -80,8 +79,7 @@ create table contracts (
         on delete cascade,
   tenant_id number(22) not null
     constraint contracts_fk_tenant
-      references tenants(tenant_id)
-        on delete cascade,
+      references tenants(tenant_id),
   start_date date not null,
   end_date date,
   rent_amount number(7,2) not null
