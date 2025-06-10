@@ -17,7 +17,7 @@ The entity relationships should model the full lifecycle of a rental agreement a
 
 ## Data Model
 
-![alt](./docs/td.svg)
+![alt](./docs/classes.svg)
 
 ## Installation
 
