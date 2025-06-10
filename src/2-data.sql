@@ -2,16 +2,16 @@
 
 BEGIN
     -- Owners
-    db_owner.new_owner('Anna Novak', 'anna.novak@example.com', '601123456');
-    db_owner.new_owner('Petr Svoboda', 'petr.svoboda@example.com', '777987654');
-    db_owner.new_owner('Irena Kolarova', 'irena.k@example.com', '605666777');
-    db_owner.new_owner('Jan Malek', 'jan.malek@example.com', '603222333');
-    db_owner.new_owner('Simona Hruba', 'simona.hruba@example.com', '608999888');
-    db_owner.new_owner('Tomas Vlk', 'tomas.vlk@example.com', '604123789');
-    db_owner.new_owner('Lucie Dostalova', 'lucie.dostalova@example.com', '606456123');
+    db_owner.new_owner('Anna Novak', 'anna.novak@example.com', '601123456', '111222333/0800');
+    db_owner.new_owner('Petr Svoboda', 'petr.svoboda@example.com', '777987654', '222333444/0100');
+    db_owner.new_owner('Irena Kolarova', 'irena.k@example.com', '605666777', '333444555/0300');
+    db_owner.new_owner('Jan Malek', 'jan.malek@example.com', '603222333', '444555666/0600');
+    db_owner.new_owner('Simona Hruba', 'simona.hruba@example.com', '608999888', '555666777/2700');
+    db_owner.new_owner('Tomas Vlk', 'tomas.vlk@example.com', '604123789', '666777888/5500');
+    db_owner.new_owner('Lucie Dostalova', 'lucie.dostalova@example.com', '606456123', '777888999/0710');
 
     -- Tenants
-    db_tenant.new_tenant('Jana Vesela', 'jana.vesela@example.com', '608765432');
+    db_tenant.new_tenant('Jana Vesela', 'jana.vesela@example.com', '608765432', p_notes => 'Prefers communication via email.');
     db_tenant.new_tenant('Lukas Dvorak', 'lukas.dvorak@example.com', '602111222');
     db_tenant.new_tenant('Veronika Marek', 'vero.marek@example.com', '607777777');
     db_tenant.new_tenant('David Novy', 'david.novy@example.com', '601888111');
@@ -56,13 +56,13 @@ BEGIN
     db_request.new_request(7, 7, 'Broken light switch.');
 
     -- Employees
-    db_employee.new_employee('Martin Hruby', 'Technician', 'martin.hruby@example.com');
-    db_employee.new_employee('Eva Janska', 'Plumber', 'eva.janska@example.com');
-    db_employee.new_employee('Tomas Novak', 'Electrician', 'tomas.novak@example.com');
-    db_employee.new_employee('Klara Mrazova', 'Cleaner', 'klara.mrazova@example.com');
-    db_employee.new_employee('Filip Adam', 'Supervisor', 'filip.adam@example.com');
-    db_employee.new_employee('Jana Vosmikova', 'Caretaker', 'jana.vosmikova@example.com');
-    db_employee.new_employee('Ondrej Havel', 'HVAC', 'ondrej.havel@example.com');
+    db_employee.new_employee('Martin Hruby', 'martin.hruby@example.com', '777000001', 'Technician');
+    db_employee.new_employee('Eva Janska', 'eva.janska@example.com', '777000002', 'Plumber');
+    db_employee.new_employee('Tomas Novak', 'tomas.novak@example.com', '777000003', 'Electrician');
+    db_employee.new_employee('Klara Mrazova', 'klara.mrazova@example.com', '777000004', 'Cleaner');
+    db_employee.new_employee('Filip Adam', 'filip.adam@example.com', '777000005', 'Supervisor');
+    db_employee.new_employee('Jana Vosmikova', 'jana.vosmikova@example.com', '777000006', 'Caretaker');
+    db_employee.new_employee('Ondrej Havel', 'ondrej.havel@example.com', '777000007', 'HVAC');
 
     -- Service Companies
     db_service_company.new_company('FixIt s.r.o.', 'kontakt@fixit.cz', '603998877');
@@ -76,11 +76,20 @@ BEGIN
     -- Service Actions
     db_service_action.new_action(1, 1, 1, DATE '2024-03-05', 'Checked and replaced valve');
     db_service_action.new_action(2, 2, 2, DATE '2024-03-07', 'Ordered new faucet');
-    db_service_action.new_action(3, 3, 3, DATE '2024-03-08', 'Adjusted window hinges');
-    db_service_action.new_action(4, 4, 4, DATE '2024-03-09', 'Removed mold');
+    db_service_action.new_action(3, null, 7, DATE '2024-03-08', 'Adjusted window hinges');
+    db_service_action.new_action(4, 4, null, DATE '2024-03-09', 'Removed mold');
     db_service_action.new_action(5, 5, 5, DATE '2024-03-10', 'Machine replaced');
     db_service_action.new_action(6, 6, 6, DATE '2024-03-11', 'Spoke with tenants');
     db_service_action.new_action(7, 7, 7, DATE '2024-03-12', 'Switch rewired');
+
+    -- Request Status Updates
+    db_request.update_request_status(1, 'RESOLVED');
+    db_request.update_request_status(2, 'IN_PROGRESS');
+    db_request.update_request_status(3, 'RESOLVED');
+    db_request.update_request_status(4, 'RESOLVED');
+    db_request.update_request_status(5, 'RESOLVED');
+    db_request.update_request_status(6, 'RESOLVED');
+    db_request.update_request_status(7, 'RESOLVED');
 
 END;
 /

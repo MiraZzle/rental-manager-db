@@ -4,7 +4,7 @@
 select * from owners;
 
 -- Přidání nového vlastníka
-exec db_owner.new_owner('Test Owner', 'test.owner@example.com', '601000001');
+exec db_owner.new_owner('Test Owner', 'test.owner@example.com', '601000001', '999888777/0800');
 select * from owners;
 
 -- Změna kontaktních údajů
@@ -149,7 +149,7 @@ end;
 /
 
 -- Přidání zaměstnance a servisní firmy
-exec db_employee.new_employee('Test Technic', 'Údržbář', 'technician@example.com');
+exec db_employee.new_employee('Test Technic', 'technician@example.com', '777555666', 'Údržbář');
 exec db_service_company.new_company('TestServ', 'kontakt@testserv.cz', '604404404');
 
 -- Přiřazení servisní akce

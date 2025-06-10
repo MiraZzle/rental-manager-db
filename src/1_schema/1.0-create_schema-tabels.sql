@@ -6,24 +6,47 @@
   Vztahy mezi entitami reflektují životní cyklus nájemního vztahu a jeho správu.
 */
 
+-- table osob
+create table persons (
+  person_id number(22)
+    constraint persons_pk primary key,
+  name varchar2(100 char) not null,
+  email varchar2(100 char)
+    constraint persons_uq_email unique,
+  phone varchar2(20 char)
+    constraint persons_uq_phone unique
+);
+
 -- table majitelů
 create table owners (
   owner_id number(22)
-    constraint owners_pk
-      primary key,
-  owner_name varchar2(100 char) not null,
-  email varchar2(100 char),
-  phone varchar2(20 char)
+    constraint owners_pk primary key,
+  person_id number(22) not null
+    constraint owners_fk_person references persons(person_id)
+      on delete cascade,
+  bank_account varchar2(50 char) not null
+    constraint owners_uq_bank_account unique
 );
 
 -- table nájemníků
 create table tenants (
   tenant_id number(22)
-    constraint tenants_pk
+    constraint tenants_pk primary key,
+  person_id number(22) not null
+    constraint tenants_fk_person references persons(person_id)
+      on delete cascade,
+  notes varchar2(255 char)
+);
+
+-- table zaměstnanců
+create table employees (
+  employee_id number(22)
+    constraint employees_pk
       primary key,
-  tenant_name varchar2(100 char) not null,
-  email varchar2(100 char),
-  phone varchar2(20 char)
+    person_id number(22) not null
+    constraint employees_fk_person references persons(person_id)
+      on delete cascade,
+  role varchar2(50 char)
 );
 
 -- table bytů
@@ -98,16 +121,6 @@ create table service_companies (
       unique,
   email varchar2(100 char),
   phone varchar2(20 char)
-);
-
--- table zaměstnanců
-create table employees (
-  employee_id number(22)
-    constraint employees_pk
-      primary key,
-  employee_name varchar2(100 char) not null,
-  role varchar2(50 char),
-  email varchar2(100 char)
 );
 
 -- table žádostí o servis

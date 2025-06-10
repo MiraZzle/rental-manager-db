@@ -12,72 +12,156 @@ create sequence request_id_seq start with 1 increment by 1;
 create sequence employee_id_seq start with 1 increment by 1;
 create sequence company_id_seq start with 1 increment by 1;
 create sequence action_id_seq start with 1 increment by 1;
+create sequence person_id_seq start with 1 increment by 1;
+
+-- ==============================================
+-- PERSONS
+-- ==============================================
+CREATE OR REPLACE PACKAGE db_person IS
+  -- Vloží nebo najde osobu podle unikátního emailu
+  FUNCTION get_or_create_person(
+    p_name  IN persons.name%TYPE,
+    p_email IN persons.email%TYPE,
+    p_phone IN persons.phone%TYPE
+  ) RETURN persons.person_id%TYPE;
+END db_person;
+/
+
+CREATE OR REPLACE PACKAGE BODY db_person IS
+  FUNCTION get_or_create_person(
+    p_name  IN persons.name%TYPE,
+    p_email IN persons.email%TYPE,
+    p_phone IN persons.phone%TYPE
+  ) RETURN persons.person_id%TYPE IS
+    v_person_id persons.person_id%TYPE;
+  BEGIN
+    -- pouzijeme MERGE aka UPSERT
+    MERGE INTO persons p
+    USING (SELECT p_email AS email FROM dual) src
+    ON (p.email = src.email)
+    WHEN NOT MATCHED THEN
+      -- Pokud nenajdeme osobu podle mailu, vytvorime ji
+      INSERT (person_id, name, email, phone)
+      VALUES (person_id_seq.nextval, p_name, p_email, p_phone);
+
+    SELECT person_id INTO v_person_id FROM persons WHERE email = p_email;
+
+    RETURN v_person_id;
+
+  END get_or_create_person;
+END db_person;
+/
 
 -- ==============================================
 -- OWNERS
 -- ==============================================
 CREATE OR REPLACE PACKAGE db_owner IS
-  -- Vloží nového vlastníka
+  -- Vloží nového vlastníka. Používá db_person pro mapovani osob
   PROCEDURE new_owner(
-    p_name  IN owners.owner_name%TYPE,
-    p_email IN owners.email%TYPE,
-    p_phone IN owners.phone%TYPE);
+    p_name         IN persons.name%TYPE,
+    p_email        IN persons.email%TYPE,
+    p_phone        IN persons.phone%TYPE,
+    p_bank_account IN owners.bank_account%TYPE
+  );
 
-  -- Aktualizuje kontaktní údaje vlastníka
+  -- Aktualizuje kontaktní údaje vlastníka v tabulce persons
   PROCEDURE update_contact_info(
     p_owner_id  IN owners.owner_id%TYPE,
-    p_new_email IN owners.email%TYPE,
-    p_new_phone IN owners.phone%TYPE);
+    p_new_email IN persons.email%TYPE,
+    p_new_phone IN persons.phone%TYPE
+  );
 
-  -- Smaže vlastníka (pouze pokud nevlastní žádné byty)
+  -- Smaže roli vlastníka (ale ne osobu), pouze pokud nevlastní žádné byty
   PROCEDURE delete_owner(p_owner_id IN owners.owner_id%TYPE);
 
-  -- Vrátí jméno vlastníka podle ID
-  FUNCTION get_owner_name(p_owner_id IN owners.owner_id%TYPE) RETURN owners.owner_name%TYPE;
+  -- Vrátí jméno vlastníka podle ID v persons
+  FUNCTION get_owner_name(p_owner_id IN owners.owner_id%TYPE) RETURN persons.name%TYPE;
+
 END db_owner;
 /
 
 CREATE OR REPLACE PACKAGE BODY db_owner IS
-  PROCEDURE new_owner(p_name IN owners.owner_name%TYPE, p_email IN owners.email%TYPE, p_phone IN owners.phone%TYPE) IS
+  PROCEDURE new_owner(
+    p_name         IN persons.name%TYPE,
+    p_email        IN persons.email%TYPE,
+    p_phone        IN persons.phone%TYPE,
+    p_bank_account IN owners.bank_account%TYPE
+  ) IS
+    v_person_id   persons.person_id%TYPE;
+    v_role_exists NUMBER;
   BEGIN
-    INSERT INTO owners(owner_id, owner_name, email, phone)
-    VALUES (owner_id_seq.nextval, p_name, p_email, p_phone);
+    -- Najdeme nebo vytvoříme id osoby v persons tablu
+    v_person_id := db_person.get_or_create_person(p_name, p_email, p_phone);
+
+    SELECT COUNT(*)
+    INTO v_role_exists
+    FROM owners
+    WHERE person_id = v_person_id;
+
+    -- Kontrola, jestli osoba již není vlastníkem
+    IF v_role_exists > 0 THEN
+      RAISE_APPLICATION_ERROR(-20015, 'This person is already registered as an owner.');
+    ELSE
+      INSERT INTO owners(owner_id, person_id, bank_account)
+      VALUES (owner_id_seq.nextval, v_person_id, p_bank_account);
+    END IF;
+
+  EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+      RAISE_APPLICATION_ERROR(-20016, 'The bank account "' || p_bank_account || '" is already in use.');
   END new_owner;
 
-  PROCEDURE update_contact_info(p_owner_id IN owners.owner_id%TYPE, p_new_email IN owners.email%TYPE, p_new_phone IN owners.phone%TYPE) IS
+  PROCEDURE update_contact_info(
+    p_owner_id  IN owners.owner_id%TYPE,
+    p_new_email IN persons.email%TYPE,
+    p_new_phone IN persons.phone%TYPE
+  ) IS
+    v_person_id persons.person_id%TYPE;
   BEGIN
-    UPDATE owners
+    SELECT person_id INTO v_person_id FROM owners WHERE owner_id = p_owner_id;
+
+    UPDATE persons
     SET
       email = p_new_email,
       phone = p_new_phone
-    WHERE owner_id = p_owner_id;
+    WHERE person_id = v_person_id;
 
     IF SQL%NOTFOUND THEN
-        RAISE_APPLICATION_ERROR(-20200, 'Owner with ID ' || p_owner_id || ' not found.');
+        RAISE_APPLICATION_ERROR(-20200, 'Person record for Owner ID ' || p_owner_id || ' not found.');
     END IF;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RAISE_APPLICATION_ERROR(-20201, 'Owner with ID ' || p_owner_id || ' not found.');
+    WHEN DUP_VAL_ON_INDEX THEN
+      RAISE_APPLICATION_ERROR(-20011, 'This email or phone is already in use by another person.');
   END update_contact_info;
 
   PROCEDURE delete_owner(p_owner_id IN owners.owner_id%TYPE) IS
-    v_flat_count NUMBER;
+    e_child_records_found EXCEPTION;
+    PRAGMA EXCEPTION_INIT(e_child_records_found, -2292);
   BEGIN
-    SELECT COUNT(*) INTO v_flat_count FROM flats WHERE owner_id = p_owner_id;
+    DELETE FROM owners WHERE owner_id = p_owner_id;
 
-    IF v_flat_count > 0 THEN
-      RAISE_APPLICATION_ERROR(-20201, 'Cannot delete owner. They still own ' || v_flat_count || ' flat(s).');
-    ELSE
-      DELETE FROM owners WHERE owner_id = p_owner_id;
-    END IF;
+  EXCEPTION
+    WHEN e_child_records_found THEN
+      RAISE_APPLICATION_ERROR(-20202, 'Cannot delete owner. They still own one or more flats.');
   END delete_owner;
 
-  FUNCTION get_owner_name(p_owner_id IN owners.owner_id%TYPE) RETURN owners.owner_name%TYPE IS
-    v_name owners.owner_name%TYPE;
+  FUNCTION get_owner_name(p_owner_id IN owners.owner_id%TYPE) RETURN persons.name%TYPE IS
+    v_name persons.name%TYPE;
   BEGIN
-    SELECT owner_name INTO v_name FROM owners WHERE owner_id = p_owner_id;
+    SELECT p.name
+    INTO v_name
+    FROM owners o
+    JOIN persons p ON o.person_id = p.person_id
+    WHERE o.owner_id = p_owner_id;
+
     RETURN v_name;
   EXCEPTION
     WHEN NO_DATA_FOUND THEN
       RETURN NULL;
   END get_owner_name;
+
 END db_owner;
 /
 
@@ -85,68 +169,185 @@ END db_owner;
 -- TENANTS
 -- ==============================================
 CREATE OR REPLACE PACKAGE db_tenant IS
-  -- Vloží nového nájemníka
+  -- Vloží nového nájemníka. Používá db_person k nalezení nebo vytvoření osoby
   PROCEDURE new_tenant(
-    p_name  IN tenants.tenant_name%TYPE,
-    p_email IN tenants.email%TYPE,
-    p_phone IN tenants.phone%TYPE);
+    p_name  IN persons.name%TYPE,
+    p_email IN persons.email%TYPE,
+    p_phone IN persons.phone%TYPE,
+    p_notes IN tenants.notes%TYPE DEFAULT NULL
+  );
 
-  -- Aktualizuje kontaktní údaje nájemníka
+  -- Aktualizuje kontaktní údaje nájemníka v persons
   PROCEDURE update_contact_info(
     p_tenant_id IN tenants.tenant_id%TYPE,
-    p_new_email IN tenants.email%TYPE,
-    p_new_phone IN tenants.phone%TYPE);
+    p_new_email IN persons.email%TYPE,
+    p_new_phone IN persons.phone%TYPE
+  );
 
-  -- Smaže nájemníka (pouze pokud nemá žádné smlouvy)
+  -- Smaže roli nájemníka (ale ne osobu), pouze pokud nemá žádné aktivní smlouvy
   PROCEDURE delete_tenant(p_tenant_id IN tenants.tenant_id%TYPE);
 
-  -- Vrátí jméno nájemníka podle ID
-  FUNCTION get_tenant_name(p_tenant_id IN tenants.tenant_id%TYPE) RETURN tenants.tenant_name%TYPE;
+  -- Vrátí jméno nájemníka podle ID spojením s tabulkou persons.
+  FUNCTION get_tenant_name(p_tenant_id IN tenants.tenant_id%TYPE) RETURN persons.name%TYPE;
+
 END db_tenant;
 /
 
 CREATE OR REPLACE PACKAGE BODY db_tenant IS
-  PROCEDURE new_tenant(p_name IN tenants.tenant_name%TYPE, p_email IN tenants.email%TYPE, p_phone IN tenants.phone%TYPE) IS
+  PROCEDURE new_tenant(
+    p_name  IN persons.name%TYPE,
+    p_email IN persons.email%TYPE,
+    p_phone IN persons.phone%TYPE,
+    p_notes IN tenants.notes%TYPE DEFAULT NULL
+  ) IS
+    v_person_id   persons.person_id%TYPE;
+    v_role_exists NUMBER;
   BEGIN
-    INSERT INTO tenants(tenant_id, tenant_name, email, phone)
-    VALUES (tenant_id_seq.nextval, p_name, p_email, p_phone);
+    -- Najdeme nebo vytvoříme id osoby v persons tablu
+    v_person_id := db_person.get_or_create_person(p_name, p_email, p_phone);
+
+    -- Kontrola, zda osoba již není nájemníkem
+    SELECT COUNT(*)
+    INTO v_role_exists
+    FROM tenants
+    WHERE person_id = v_person_id;
+
+    IF v_role_exists > 0 THEN
+      RAISE_APPLICATION_ERROR(-20025, 'This person is already registered as a tenant.');
+    ELSE
+      INSERT INTO tenants(tenant_id, person_id, notes)
+      VALUES (tenant_id_seq.nextval, v_person_id, p_notes);
+    END IF;
+
   END new_tenant;
 
-  PROCEDURE update_contact_info(p_tenant_id IN tenants.tenant_id%TYPE, p_new_email IN tenants.email%TYPE, p_new_phone IN tenants.phone%TYPE) IS
+  PROCEDURE update_contact_info(
+    p_tenant_id IN tenants.tenant_id%TYPE,
+    p_new_email IN persons.email%TYPE,
+    p_new_phone IN persons.phone%TYPE
+  ) IS
+    v_person_id persons.person_id%TYPE;
   BEGIN
-    UPDATE tenants
+    SELECT person_id INTO v_person_id FROM tenants WHERE tenant_id = p_tenant_id;
+
+    UPDATE persons
     SET
       email = p_new_email,
       phone = p_new_phone
-    WHERE tenant_id = p_tenant_id;
+    WHERE person_id = v_person_id;
 
     IF SQL%NOTFOUND THEN
-        RAISE_APPLICATION_ERROR(-20210, 'Tenant with ID ' || p_tenant_id || ' not found.');
+        RAISE_APPLICATION_ERROR(-20210, 'Person record for Tenant ID ' || p_tenant_id || ' not found.');
     END IF;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RAISE_APPLICATION_ERROR(-20211, 'Tenant with ID ' || p_tenant_id || ' not found.');
+    WHEN DUP_VAL_ON_INDEX THEN
+      RAISE_APPLICATION_ERROR(-20011, 'This email or phone is already in use by another person.');
   END update_contact_info;
 
   PROCEDURE delete_tenant(p_tenant_id IN tenants.tenant_id%TYPE) IS
-    v_contract_count NUMBER;
+    e_child_records_found EXCEPTION;
+    PRAGMA EXCEPTION_INIT(e_child_records_found, -2292);
   BEGIN
-    SELECT COUNT(*) INTO v_contract_count FROM contracts WHERE tenant_id = p_tenant_id;
-
-    IF v_contract_count > 0 THEN
-      RAISE_APPLICATION_ERROR(-20211, 'Cannot delete tenant. They have ' || v_contract_count || ' contract(s).');
-    ELSE
-      DELETE FROM tenants WHERE tenant_id = p_tenant_id;
-    END IF;
+    DELETE FROM tenants WHERE tenant_id = p_tenant_id;
+  EXCEPTION
+    WHEN e_child_records_found THEN
+      RAISE_APPLICATION_ERROR(-20212, 'Cannot delete tenant. They still have one or more contracts.');
   END delete_tenant;
 
-  FUNCTION get_tenant_name(p_tenant_id IN tenants.tenant_id%TYPE) RETURN tenants.tenant_name%TYPE IS
-    v_name tenants.tenant_name%TYPE;
+  FUNCTION get_tenant_name(p_tenant_id IN tenants.tenant_id%TYPE) RETURN persons.name%TYPE IS
+    v_name persons.name%TYPE;
   BEGIN
-    SELECT tenant_name INTO v_name FROM tenants WHERE tenant_id = p_tenant_id;
+    SELECT p.name
+    INTO v_name
+    FROM tenants t
+    JOIN persons p ON t.person_id = p.person_id
+    WHERE t.tenant_id = p_tenant_id;
+
     RETURN v_name;
   EXCEPTION
     WHEN NO_DATA_FOUND THEN
       RETURN NULL;
   END get_tenant_name;
+
 END db_tenant;
+/
+
+-- ==============================================
+-- EMPLOYEES
+-- ==============================================
+CREATE OR REPLACE PACKAGE db_employee IS
+  -- Vloží nového zaměstnance. Používá db_person k nalezení nebo vytvoření osoby.
+  PROCEDURE new_employee(
+    p_name  IN persons.name%TYPE,
+    p_email IN persons.email%TYPE,
+    p_phone IN persons.phone%TYPE,
+    p_role  IN employees.role%TYPE
+  );
+
+  -- Smaže roli zaměstnance (ale ne osobu), pouze pokud nemá žádné přiřazené servisní akce.
+  PROCEDURE delete_employee(p_employee_id IN employees.employee_id%TYPE);
+
+  -- Vrátí jméno zaměstnance podle ID spojením s tabulkou persons.
+  FUNCTION get_employee_name(p_employee_id IN employees.employee_id%TYPE) RETURN persons.name%TYPE;
+
+END db_employee;
+/
+
+CREATE OR REPLACE PACKAGE BODY db_employee IS
+  PROCEDURE new_employee(
+    p_name  IN persons.name%TYPE,
+    p_email IN persons.email%TYPE,
+    p_phone IN persons.phone%TYPE,
+    p_role  IN employees.role%TYPE
+  ) IS
+    v_person_id   persons.person_id%TYPE;
+    v_role_exists NUMBER;
+  BEGIN
+    v_person_id := db_person.get_or_create_person(p_name, p_email, p_phone);
+
+    SELECT COUNT(*)
+    INTO v_role_exists
+    FROM employees
+    WHERE person_id = v_person_id;
+
+    IF v_role_exists > 0 THEN
+      RAISE_APPLICATION_ERROR(-20035, 'This person is already registered as an employee.');
+    ELSE
+      -- Step 3: Insert the employee-specific information.
+      INSERT INTO employees(employee_id, person_id, role)
+      VALUES (employee_id_seq.nextval, v_person_id, p_role);
+    END IF;
+
+  END new_employee;
+
+  PROCEDURE delete_employee(p_employee_id IN employees.employee_id%TYPE) IS
+    e_child_records_found EXCEPTION;
+    PRAGMA EXCEPTION_INIT(e_child_records_found, -2292);
+  BEGIN
+    DELETE FROM employees WHERE employee_id = p_employee_id;
+  EXCEPTION
+    WHEN e_child_records_found THEN
+      RAISE_APPLICATION_ERROR(-20036, 'Cannot delete employee. They are assigned to one or more service actions.');
+  END delete_employee;
+
+  FUNCTION get_employee_name(p_employee_id IN employees.employee_id%TYPE) RETURN persons.name%TYPE IS
+    v_name persons.name%TYPE;
+  BEGIN
+    SELECT p.name
+    INTO v_name
+    FROM employees e
+    JOIN persons p ON e.person_id = p.person_id
+    WHERE e.employee_id = p_employee_id;
+
+    RETURN v_name;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END get_employee_name;
+
+END db_employee;
 /
 
 -- ==============================================
@@ -170,7 +371,7 @@ CREATE OR REPLACE PACKAGE db_flat IS
   FUNCTION get_flats_by_owner(p_owner_id IN owners.owner_id%TYPE) RETURN SYS_REFCURSOR;
 
   -- Vrátí jméno aktuálního nájemníka bytu
-  FUNCTION get_current_tenant_name(p_flat_id IN flats.flat_id%TYPE) RETURN tenants.tenant_name%TYPE;
+  FUNCTION get_current_tenant_name(p_flat_id IN flats.flat_id%TYPE) RETURN persons.name%TYPE;
 END db_flat;
 /
 
@@ -217,16 +418,17 @@ CREATE OR REPLACE PACKAGE BODY db_flat IS
     RETURN v_cursor;
   END get_flats_by_owner;
 
-  FUNCTION get_current_tenant_name(p_flat_id IN flats.flat_id%TYPE) RETURN tenants.tenant_name%TYPE IS
-    v_tenant_name tenants.tenant_name%TYPE;
+  FUNCTION get_current_tenant_name(p_flat_id IN flats.flat_id%TYPE) RETURN persons.name%TYPE IS
+    v_tenant_name persons.name%TYPE;
   BEGIN
-    SELECT t.tenant_name INTO v_tenant_name
+    SELECT p.name INTO v_tenant_name
     FROM contracts c
     JOIN tenants t ON c.tenant_id = t.tenant_id
+    JOIN persons p ON t.person_id = p.person_id
     WHERE c.flat_id = p_flat_id
       AND c.start_date <= SYSDATE
       AND (c.end_date IS NULL OR c.end_date >= SYSDATE)
-      AND ROWNUM = 1; -- Pouze jeden zaznam je vracen, pokud jich je vice
+      AND ROWNUM = 1;
 
     RETURN v_tenant_name;
   EXCEPTION
@@ -482,40 +684,6 @@ CREATE OR REPLACE PACKAGE BODY db_request IS
     RETURN v_count;
   END count_open_requests;
 END db_request;
-/
-
--- ==============================================
--- EMPLOYEES
--- ==============================================
-CREATE OR REPLACE PACKAGE db_employee IS
-  -- Vloží nového zaměstnance
-  PROCEDURE new_employee(
-    p_name  IN employees.employee_name%TYPE,
-    p_role  IN employees.role%TYPE,
-    p_email IN employees.email%TYPE);
-
-  -- Vrátí jméno zaměstnance podle ID
-  FUNCTION get_employee_name(p_employee_id IN employees.employee_id%TYPE) RETURN employees.employee_name%TYPE;
-END db_employee;
-/
-
-CREATE OR REPLACE PACKAGE BODY db_employee IS
-  PROCEDURE new_employee(p_name employees.employee_name%TYPE, p_role employees.role%TYPE, p_email employees.email%TYPE) IS
-  BEGIN
-    INSERT INTO employees(employee_id, employee_name, "ROLE", email)
-    VALUES (employee_id_seq.nextval, p_name, p_role, p_email);
-  END new_employee;
-
-  FUNCTION get_employee_name(p_employee_id employees.employee_id%TYPE) RETURN employees.employee_name%TYPE IS
-    v_name employees.employee_name%TYPE;
-  BEGIN
-    SELECT employee_name INTO v_name FROM employees WHERE employee_id = p_employee_id;
-    RETURN v_name;
-  EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-      RETURN NULL;
-  END get_employee_name;
-END db_employee;
 /
 
 -- ==============================================

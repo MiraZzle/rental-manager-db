@@ -3,6 +3,9 @@
 exec dbms_stats.gather_schema_stats(USER);
 
 -- Tabulkové stats
+exec dbms_stats.gather_table_stats(USER, 'PERSONS', cascade => TRUE);
+select column_name, nullable, num_distinct, num_nulls, density, histogram from ALL_TAB_COLUMNS where table_name = 'PERSONS';
+
 exec dbms_stats.gather_table_stats(USER, 'OWNERS', cascade => TRUE);
 select column_name, nullable, num_distinct, num_nulls, density, histogram from ALL_TAB_COLUMNS where table_name = 'OWNERS';
 

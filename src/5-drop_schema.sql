@@ -13,6 +13,7 @@ end;
 
 -- Drop package
 begin
+  execute immediate 'drop package db_person';
   execute immediate 'drop package db_owner';
   execute immediate 'drop package db_tenant';
   execute immediate 'drop package db_flat';
@@ -28,6 +29,7 @@ end;
 
 -- Drop sekvence
 begin
+  execute immediate 'drop sequence person_id_seq';
   execute immediate 'drop sequence owner_id_seq';
   execute immediate 'drop sequence tenant_id_seq';
   execute immediate 'drop sequence flat_id_seq';
@@ -62,6 +64,7 @@ begin
   execute immediate 'drop table service_companies';
   execute immediate 'drop table owners';
   execute immediate 'drop table tenants';
+  execute immediate 'drop table persons';
 exception when others then null;
 end;
 /
