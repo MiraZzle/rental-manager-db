@@ -30,13 +30,10 @@ end;
 -- Drop sekvence
 begin
   execute immediate 'drop sequence person_id_seq';
-  execute immediate 'drop sequence owner_id_seq';
-  execute immediate 'drop sequence tenant_id_seq';
   execute immediate 'drop sequence flat_id_seq';
   execute immediate 'drop sequence contract_id_seq';
   execute immediate 'drop sequence payment_id_seq';
   execute immediate 'drop sequence request_id_seq';
-  execute immediate 'drop sequence employee_id_seq';
   execute immediate 'drop sequence company_id_seq';
   execute immediate 'drop sequence action_id_seq';
 exception when others then null;

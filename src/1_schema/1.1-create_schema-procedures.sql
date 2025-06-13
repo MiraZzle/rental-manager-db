@@ -4,12 +4,9 @@
 -- SEKVENCE
 -- ==============================================
 create sequence flat_id_seq start with 1 increment by 1;
-create sequence owner_id_seq start with 1 increment by 1;
-create sequence tenant_id_seq start with 1 increment by 1;
 create sequence contract_id_seq start with 1 increment by 1;
 create sequence payment_id_seq start with 1 increment by 1;
 create sequence request_id_seq start with 1 increment by 1;
-create sequence employee_id_seq start with 1 increment by 1;
 create sequence company_id_seq start with 1 increment by 1;
 create sequence action_id_seq start with 1 increment by 1;
 create sequence person_id_seq start with 1 increment by 1;
@@ -23,6 +20,10 @@ CREATE OR REPLACE PACKAGE db_person IS
     p_name  IN persons.name%TYPE,
     p_email IN persons.email%TYPE,
     p_phone IN persons.phone%TYPE
+  ) RETURN persons.person_id%TYPE;
+
+  FUNCTION get_person_id_by_email(
+    p_email IN persons.email%TYPE
   ) RETURN persons.person_id%TYPE;
 END db_person;
 /
@@ -49,6 +50,22 @@ CREATE OR REPLACE PACKAGE BODY db_person IS
     RETURN v_person_id;
 
   END get_or_create_person;
+
+  FUNCTION get_person_id_by_email(
+    p_email IN persons.email%TYPE
+  ) RETURN persons.person_id%TYPE IS
+    v_person_id persons.person_id%TYPE;
+  BEGIN
+    SELECT person_id
+    INTO v_person_id
+    FROM persons
+    WHERE email = p_email;
+
+    RETURN v_person_id;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END get_person_id_by_email;
 END db_person;
 /
 
@@ -96,14 +113,14 @@ CREATE OR REPLACE PACKAGE BODY db_owner IS
     SELECT COUNT(*)
     INTO v_role_exists
     FROM owners
-    WHERE person_id = v_person_id;
+    WHERE owner_id = v_person_id;
 
     -- Kontrola, jestli osoba již není vlastníkem
     IF v_role_exists > 0 THEN
       RAISE_APPLICATION_ERROR(-20015, 'This person is already registered as an owner.');
     ELSE
-      INSERT INTO owners(owner_id, person_id, bank_account)
-      VALUES (owner_id_seq.nextval, v_person_id, p_bank_account);
+      INSERT INTO owners(owner_id, bank_account)
+      VALUES (v_person_id, p_bank_account);
     END IF;
 
   EXCEPTION
@@ -116,15 +133,12 @@ CREATE OR REPLACE PACKAGE BODY db_owner IS
     p_new_email IN persons.email%TYPE,
     p_new_phone IN persons.phone%TYPE
   ) IS
-    v_person_id persons.person_id%TYPE;
   BEGIN
-    SELECT person_id INTO v_person_id FROM owners WHERE owner_id = p_owner_id;
-
     UPDATE persons
     SET
       email = p_new_email,
       phone = p_new_phone
-    WHERE person_id = v_person_id;
+    WHERE person_id = p_owner_id;
 
     IF SQL%NOTFOUND THEN
         RAISE_APPLICATION_ERROR(-20200, 'Person record for Owner ID ' || p_owner_id || ' not found.');
@@ -153,7 +167,7 @@ CREATE OR REPLACE PACKAGE BODY db_owner IS
     SELECT p.name
     INTO v_name
     FROM owners o
-    JOIN persons p ON o.person_id = p.person_id
+    JOIN persons p ON o.owner_id = p.person_id
     WHERE o.owner_id = p_owner_id;
 
     RETURN v_name;
@@ -210,13 +224,13 @@ CREATE OR REPLACE PACKAGE BODY db_tenant IS
     SELECT COUNT(*)
     INTO v_role_exists
     FROM tenants
-    WHERE person_id = v_person_id;
+    WHERE tenant_id = v_person_id;
 
     IF v_role_exists > 0 THEN
       RAISE_APPLICATION_ERROR(-20025, 'This person is already registered as a tenant.');
     ELSE
-      INSERT INTO tenants(tenant_id, person_id, notes)
-      VALUES (tenant_id_seq.nextval, v_person_id, p_notes);
+      INSERT INTO tenants(tenant_id, notes)
+      VALUES (v_person_id, p_notes);
     END IF;
 
   END new_tenant;
@@ -226,15 +240,12 @@ CREATE OR REPLACE PACKAGE BODY db_tenant IS
     p_new_email IN persons.email%TYPE,
     p_new_phone IN persons.phone%TYPE
   ) IS
-    v_person_id persons.person_id%TYPE;
   BEGIN
-    SELECT person_id INTO v_person_id FROM tenants WHERE tenant_id = p_tenant_id;
-
     UPDATE persons
     SET
       email = p_new_email,
       phone = p_new_phone
-    WHERE person_id = v_person_id;
+    WHERE person_id = p_tenant_id;
 
     IF SQL%NOTFOUND THEN
         RAISE_APPLICATION_ERROR(-20210, 'Person record for Tenant ID ' || p_tenant_id || ' not found.');
@@ -262,7 +273,7 @@ CREATE OR REPLACE PACKAGE BODY db_tenant IS
     SELECT p.name
     INTO v_name
     FROM tenants t
-    JOIN persons p ON t.person_id = p.person_id
+    JOIN persons p ON t.tenant_id = p.person_id
     WHERE t.tenant_id = p_tenant_id;
 
     RETURN v_name;
@@ -310,14 +321,14 @@ CREATE OR REPLACE PACKAGE BODY db_employee IS
     SELECT COUNT(*)
     INTO v_role_exists
     FROM employees
-    WHERE person_id = v_person_id;
+    WHERE employee_id = v_person_id;
 
     IF v_role_exists > 0 THEN
       RAISE_APPLICATION_ERROR(-20035, 'This person is already registered as an employee.');
     ELSE
       -- Step 3: Insert the employee-specific information.
-      INSERT INTO employees(employee_id, person_id, role)
-      VALUES (employee_id_seq.nextval, v_person_id, p_role);
+      INSERT INTO employees(employee_id, role)
+      VALUES (v_person_id, p_role);
     END IF;
 
   END new_employee;
@@ -338,7 +349,7 @@ CREATE OR REPLACE PACKAGE BODY db_employee IS
     SELECT p.name
     INTO v_name
     FROM employees e
-    JOIN persons p ON e.person_id = p.person_id
+    JOIN persons p ON e.employee_id = p.person_id
     WHERE e.employee_id = p_employee_id;
 
     RETURN v_name;
@@ -356,10 +367,11 @@ END db_employee;
 CREATE OR REPLACE PACKAGE db_flat IS
   -- Vloží nový byt
   PROCEDURE new_flat(
-    p_address  IN flats.address%TYPE,
-    p_area     IN flats.area%TYPE,
-    p_rooms    IN flats.rooms%TYPE,
-    p_owner_id IN flats.owner_id%TYPE);
+    p_address     IN flats.address%TYPE,
+    p_unit_number IN flats.unit_number%TYPE,
+    p_area        IN flats.area%TYPE,
+    p_rooms       IN flats.rooms%TYPE,
+    p_owner_id    IN flats.owner_id%TYPE);
 
   -- Přeřadí byt na nového vlastníka
   PROCEDURE reassign_flat(p_flat_id IN flats.flat_id%TYPE, p_new_owner_id IN owners.owner_id%TYPE);
@@ -372,20 +384,27 @@ CREATE OR REPLACE PACKAGE db_flat IS
 
   -- Vrátí jméno aktuálního nájemníka bytu
   FUNCTION get_current_tenant_name(p_flat_id IN flats.flat_id%TYPE) RETURN persons.name%TYPE;
+
+  -- Vrátí ID bytu podle adresy a čísla jednotky
+  FUNCTION get_flat_id_by_address(p_address IN flats.address%TYPE, p_unit_number IN flats.unit_number%TYPE
+  ) RETURN flats.flat_id%TYPE;
 END db_flat;
 /
 
 CREATE OR REPLACE PACKAGE BODY db_flat IS
-  PROCEDURE new_flat(p_address flats.address%TYPE, p_area flats.area%TYPE, p_rooms flats.rooms%TYPE, p_owner_id flats.owner_id%TYPE) IS
+  PROCEDURE new_flat(p_address     IN flats.address%TYPE,
+    p_unit_number IN flats.unit_number%TYPE,
+    p_area        IN flats.area%TYPE,
+    p_rooms       IN flats.rooms%TYPE,
+    p_owner_id    IN flats.owner_id%TYPE) IS
   BEGIN
-    INSERT INTO flats(flat_id, address, area, rooms, owner_id)
-    VALUES (flat_id_seq.nextval, p_address, p_area, p_rooms, p_owner_id);
+    INSERT INTO flats(flat_id, address, unit_number, area, rooms, owner_id)
+    VALUES (flat_id_seq.nextval, p_address, p_unit_number, p_area, p_rooms, p_owner_id);
   END new_flat;
 
   PROCEDURE reassign_flat(p_flat_id IN flats.flat_id%TYPE, p_new_owner_id IN owners.owner_id%TYPE) IS
     v_check NUMBER;
   BEGIN
-    -- First, verify the new owner actually exists to prevent foreign key errors
     SELECT count(*) INTO v_check FROM owners WHERE owner_id = p_new_owner_id;
     IF v_check = 0 THEN
         RAISE_APPLICATION_ERROR(-20301, 'New owner with ID ' || p_new_owner_id || ' does not exist.');
@@ -424,7 +443,7 @@ CREATE OR REPLACE PACKAGE BODY db_flat IS
     SELECT p.name INTO v_tenant_name
     FROM contracts c
     JOIN tenants t ON c.tenant_id = t.tenant_id
-    JOIN persons p ON t.person_id = p.person_id
+    JOIN persons p ON t.tenant_id = p.person_id
     WHERE c.flat_id = p_flat_id
       AND c.start_date <= SYSDATE
       AND (c.end_date IS NULL OR c.end_date >= SYSDATE)
@@ -435,6 +454,22 @@ CREATE OR REPLACE PACKAGE BODY db_flat IS
     WHEN NO_DATA_FOUND THEN
       RETURN 'Unoccupied';
   END get_current_tenant_name;
+
+  FUNCTION get_flat_id_by_address(p_address IN flats.address%TYPE, p_unit_number IN flats.unit_number%TYPE
+   ) RETURN flats.flat_id%TYPE IS
+    v_flat_id flats.flat_id%TYPE;
+  BEGIN
+    SELECT flat_id
+    INTO v_flat_id
+    FROM flats
+    WHERE address = p_address
+      AND unit_number = p_unit_number;
+
+    RETURN v_flat_id;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END get_flat_id_by_address;
 
 END db_flat;
 /
@@ -462,6 +497,10 @@ CREATE OR REPLACE PACKAGE db_contract IS
 
   -- Vrátí počet aktivních smluv pro byt
   FUNCTION get_active_contract_count(p_flat_id IN flats.flat_id%TYPE) RETURN NUMBER;
+
+  FUNCTION get_contract_id(p_flat_id IN contracts.flat_id%TYPE, p_tenant_id IN contracts.tenant_id%TYPE,
+  p_start_date IN contracts.start_date%TYPE
+  ) RETURN contracts.contract_id%TYPE;
 END db_contract;
 /
 
@@ -509,6 +548,24 @@ CREATE OR REPLACE PACKAGE BODY db_contract IS
     WHERE flat_id = p_flat_id AND (end_date IS NULL OR end_date > SYSDATE);
     RETURN v_count;
   END get_active_contract_count;
+
+  FUNCTION get_contract_id(p_flat_id IN contracts.flat_id%TYPE, p_tenant_id IN contracts.tenant_id%TYPE,
+  p_start_date IN contracts.start_date%TYPE
+  ) RETURN contracts.contract_id%TYPE IS
+    v_contract_id contracts.contract_id%TYPE;
+  BEGIN
+    SELECT contract_id
+    INTO v_contract_id
+    FROM contracts
+    WHERE flat_id = p_flat_id
+      AND tenant_id = p_tenant_id
+      AND start_date = p_start_date;
+
+    RETURN v_contract_id;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END get_contract_id;
 END db_contract;
 /
 
@@ -537,6 +594,9 @@ CREATE OR REPLACE PACKAGE db_payment IS
 
   -- Generuje měsíční platby pro aktivní smlouvy
   PROCEDURE generate_monthly_payments;
+
+  FUNCTION get_payment_id(p_contract_id IN payments.contract_id%TYPE, p_payment_date IN payments.payment_date%TYPE)
+    RETURN payments.payment_id%TYPE;
 END db_payment;
 /
 
@@ -613,6 +673,22 @@ CREATE OR REPLACE PACKAGE BODY db_payment IS
         END;
     END LOOP;
   END generate_monthly_payments;
+
+  FUNCTION get_payment_id(p_contract_id  IN payments.contract_id%TYPE, p_payment_date IN payments.payment_date%TYPE
+  ) RETURN payments.payment_id%TYPE IS
+    v_payment_id payments.payment_id%TYPE;
+  BEGIN
+    SELECT payment_id
+    INTO v_payment_id
+    FROM payments
+    WHERE contract_id = p_contract_id
+      AND payment_date = p_payment_date;
+
+    RETURN v_payment_id;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END get_payment_id;
 END db_payment;
 /
 
@@ -640,6 +716,14 @@ CREATE OR REPLACE PACKAGE db_request IS
 
   -- Vrátí počet otevřených žádostí pro byt
   FUNCTION count_open_requests(p_flat_id IN flats.flat_id%TYPE) RETURN NUMBER;
+
+  -- Vrátí ID žádosti podle flat_id, tenant_id, request_date a description
+  FUNCTION get_request_id(
+    p_flat_id      IN requests.flat_id%TYPE,
+    p_tenant_id    IN requests.tenant_id%TYPE,
+    p_request_date IN requests.request_date%TYPE,
+    p_description  IN requests.description%TYPE
+  ) RETURN requests.request_id%TYPE;
 END db_request;
 /
 
@@ -683,6 +767,28 @@ CREATE OR REPLACE PACKAGE BODY db_request IS
     WHERE flat_id = p_flat_id AND status != 'RESOLVED';
     RETURN v_count;
   END count_open_requests;
+
+  FUNCTION get_request_id(
+    p_flat_id      IN requests.flat_id%TYPE,
+    p_tenant_id    IN requests.tenant_id%TYPE,
+    p_request_date IN requests.request_date%TYPE,
+    p_description  IN requests.description%TYPE
+  ) RETURN requests.request_id%TYPE IS
+    v_request_id requests.request_id%TYPE;
+  BEGIN
+    SELECT request_id
+    INTO v_request_id
+    FROM requests
+    WHERE flat_id = p_flat_id
+      AND tenant_id = p_tenant_id
+      AND request_date = p_request_date
+      AND description = p_description;
+
+    RETURN v_request_id;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END get_request_id;
 END db_request;
 /
 
@@ -698,6 +804,9 @@ CREATE OR REPLACE PACKAGE db_service_company IS
 
   -- Vrátí název společnosti podle ID
   FUNCTION get_company_name(p_company_id IN service_companies.company_id%TYPE) RETURN service_companies.company_name%TYPE;
+
+  FUNCTION get_company_id_by_name(p_company_name IN service_companies.company_name%TYPE) RETURN service_companies.company_id%TYPE;
+
 END db_service_company;
 /
 
@@ -717,7 +826,21 @@ CREATE OR REPLACE PACKAGE BODY db_service_company IS
     WHEN NO_DATA_FOUND THEN
       RETURN NULL;
   END get_company_name;
-end db_service_company;
+
+FUNCTION get_company_id_by_name(p_company_name IN service_companies.company_name%TYPE) RETURN service_companies.company_id%TYPE IS
+    v_company_id service_companies.company_id%TYPE;
+  BEGIN
+    SELECT company_id
+    INTO v_company_id
+    FROM service_companies
+    WHERE company_name = p_company_name;
+
+    RETURN v_company_id;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END get_company_id_by_name;
+  end db_service_company;
 /
 
 -- ==============================================

@@ -20,9 +20,9 @@ create table persons (
 -- table majitelů
 create table owners (
   owner_id number(22)
-    constraint owners_pk primary key,
-  person_id number(22) not null
-    constraint owners_fk_person references persons(person_id)
+    constraint owners_pk
+      primary key
+    references persons(person_id)
       on delete cascade,
   bank_account varchar2(50 char) not null
     constraint owners_uq_bank_account unique
@@ -31,9 +31,9 @@ create table owners (
 -- table nájemníků
 create table tenants (
   tenant_id number(22)
-    constraint tenants_pk primary key,
-  person_id number(22) not null
-    constraint tenants_fk_person references persons(person_id)
+    constraint tenants_pk
+      primary key
+    references persons(person_id)
       on delete cascade,
   notes varchar2(255 char)
 );
@@ -42,30 +42,24 @@ create table tenants (
 create table employees (
   employee_id number(22)
     constraint employees_pk
-      primary key,
-    person_id number(22) not null
-    constraint employees_fk_person references persons(person_id)
+      primary key
+    references persons(person_id)
       on delete cascade,
   role varchar2(50 char)
 );
 
--- table bytů
 create table flats (
   flat_id number(22)
-    constraint flats_pk
-      primary key,
-  address varchar2(255 char) not null
-    constraint flats_uq_address
-      unique,
+    constraint flats_pk primary key,
+  address varchar2(255 char) not null,
+  unit_number number(10) not null,
   area number(5,2) not null
-    constraint check_flat_area
-      check (area > 0),
+    constraint check_flat_area check (area > 0),
   rooms number(2) not null
-    constraint check_flat_rooms
-      check (rooms > 0),
+    constraint check_flat_rooms check (rooms > 0),
   owner_id number(22) not null
-    constraint flats_fk_owner
-      references owners(owner_id)
+    constraint flats_fk_owner references owners(owner_id),
+  constraint flats_uq_address_unit unique (address, unit_number)
 );
 
 -- table smluv
@@ -106,7 +100,9 @@ create table payments (
       check (amount > 0),
   status char(10 char) default 'DUE' not null
     constraint check_payment_status
-      check (status in ('PAID', 'DUE', 'LATE'))
+      check (status in ('PAID', 'DUE', 'LATE')),
+  constraint payments_uq_contract_date
+    unique (contract_id, payment_date)
 );
 
 -- table servisních společností
@@ -138,7 +134,9 @@ create table requests (
   request_date date default sysdate not null,
   status char(15 char) default 'NEW' not null
     constraint check_request_status
-      check (status in ('NEW', 'IN_PROGRESS', 'RESOLVED'))
+      check (status in ('NEW', 'IN_PROGRESS', 'RESOLVED')),
+  constraint requests_uq_flat_tenant_date_desc
+    unique (flat_id, tenant_id, request_date, description)
 );
 
 -- table servisních akcí
@@ -157,5 +155,7 @@ create table service_actions (
     constraint service_actions_fk_company
       references service_companies(company_id),
   action_date date not null,
-  note varchar2(500 char)
+  note varchar2(500 char),
+  constraint service_actions_uq_request_date
+    unique (request_id, action_date)
 );
